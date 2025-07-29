@@ -22,18 +22,22 @@ jobs:
       with:
         fetch-depth: 0
 
+    - name: Install rsync
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y rsync
+
     - name: Setup SSH and Download Custom Rules
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
 
-        # Add server to known_hosts to avoid host verification prompt
+        # Avoid SSH authenticity prompts
         ssh-keyscan -H 104.197.251.175 >> ~/.ssh/known_hosts
 
-        # Download your custom rules
+        # Use rsync to download custom rules
         rsync -avz -e "ssh -i ~/.ssh/id_rsa" pranavanil123@104.197.251.175:/home/pranavanil123/Semgrep-rules ./custom-semgrep-rules
-      continue-on-error: false
 
     - name: Install Semgrep CLI
       run: |
@@ -44,7 +48,6 @@ jobs:
         mkdir -p security-reports
         semgrep scan --config ./custom-semgrep-rules --json --json-output=security-reports/semgrep-results-$(date +%Y%m%d-%H%M%S).json
 
-        # Save latest copy for convenience
         cp security-reports/semgrep-results-*.json security-reports/semgrep-latest.json
 
     - name: Commit scan results
