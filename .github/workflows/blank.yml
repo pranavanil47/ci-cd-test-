@@ -1,4 +1,4 @@
-name: Semgrep Security Scan
+name: Semgrep Offline Security Scan
 
 on:
   push:
@@ -9,11 +9,11 @@ on:
 
 jobs:
   semgrep:
-    name: Semgrep SAST Scan with Custom Rules
+    name: Offline Semgrep SAST Scan
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write
+      contents: read
       pull-requests: write
 
     steps:
@@ -22,44 +22,35 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Install rsync
+    - name: Install rsync and Semgrep CLI
       run: |
         sudo apt-get update
         sudo apt-get install -y rsync
+        python3 -m pip install semgrep
 
-    - name: Setup SSH and Download Custom Rules
+    - name: Setup SSH and Download Offline Rules
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-
-        # Avoid SSH authenticity prompts
         ssh-keyscan -H 104.197.251.175 >> ~/.ssh/known_hosts
 
-        # Use rsync to download custom rules
-        rsync -avz -e "ssh -i ~/.ssh/id_rsa" pranavanil123@104.197.251.175:/home/pranavanil123/Semgrep-rules ./custom-semgrep-rules
+        # Download rules from your VM to ./custom-semgrep-rules
+        rsync -avz -e "ssh -i ~/.ssh/id_rsa" \
+          pranavanil123@104.197.251.175:/home/pranavanil123/Semgrep-rules ./custom-semgrep-rules
 
-    - name: Install Semgrep CLI
-      run: |
-        python3 -m pip install semgrep
-
-    - name: Run Semgrep scan with custom rules
+    - name: Run Semgrep with Offline Rules
+      id: run_scan
       run: |
         mkdir -p security-reports
-        semgrep scan --config ./custom-semgrep-rules --json --json-output=security-reports/semgrep-results-$(date +%Y%m%d-%H%M%S).json
+        TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+        semgrep scan --config ./custom-semgrep-rules --json \
+          --json-output=security-reports/semgrep-results-${TIMESTAMP}.json
 
-        cp security-reports/semgrep-results-*.json security-reports/semgrep-latest.json
+        echo "file_name=semgrep-results-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
 
-    - name: Commit scan results
+    - name: Upload JSON to your VM
       run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add security-reports/
-
-        if ! git diff --staged --quiet; then
-          git commit -m "Update Semgrep scan results [skip ci]"
-          git push
-        else
-          echo "No changes to commit"
-        fi
-      continue-on-error: true
+        FILE_NAME=${{ steps.run_scan.outputs.file_name }}
+        scp -i ~/.ssh/id_rsa security-reports/$FILE_NAME \
+          pranavanil123@104.197.251.175:/home/pranavanil123/semgrep_findings/
