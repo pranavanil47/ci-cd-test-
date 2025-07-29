@@ -10,12 +10,12 @@ import random
 import requests
 
 app = Flask(__name__)
-"""
+
 # --- Hardcoded secrets ---
 API_KEY = "sk_test_51LkdjflkASDFjalksdjf"
 DB_PASSWORD = "p@ssword123"
 JWT_SECRET = "supersecretjwtkey"
-"""
+
 @app.route("/")
 def index():
     return "Welcome to Vulnerable App!"
