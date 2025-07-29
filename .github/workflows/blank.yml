@@ -9,51 +9,50 @@ on:
 
 jobs:
   semgrep:
-    name: Semgrep SAST Scan
+    name: Semgrep SAST Scan with Custom Rules
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: write
       pull-requests: write
-      
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        
-    - name: Run Semgrep scan
-      uses: semgrep/semgrep-action@v1
-      with:
-        config: >-
-          p/security-audit
-          p/secrets
-          p/owasp-top-ten
-      env:
-        SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
-      continue-on-error: true
-      
-    - name: Run Semgrep CLI and save JSON
+
+    - name: Setup SSH and Download Custom Rules
       run: |
-        # Install Semgrep CLI
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+
+        # Add server to known_hosts to avoid host verification prompt
+        ssh-keyscan -H 104.197.251.175 >> ~/.ssh/known_hosts
+
+        # Download your custom rules
+        rsync -avz -e "ssh -i ~/.ssh/id_rsa" pranavanil123@104.197.251.175:/home/pranavanil123/Semgrep-rules ./custom-semgrep-rules
+      continue-on-error: false
+
+    - name: Install Semgrep CLI
+      run: |
         python3 -m pip install semgrep
-        
-        # Create reports directory if it doesn't exist
+
+    - name: Run Semgrep scan with custom rules
+      run: |
         mkdir -p security-reports
-        
-        # Run Semgrep scan and save to JSON file
-        semgrep scan --config auto --json --json-output=security-reports/semgrep-results-$(date +%Y%m%d-%H%M%S).json
-        
-        # Also create a latest symlink for easy access
+        semgrep scan --config ./custom-semgrep-rules --json --json-output=security-reports/semgrep-results-$(date +%Y%m%d-%H%M%S).json
+
+        # Save latest copy for convenience
         cp security-reports/semgrep-results-*.json security-reports/semgrep-latest.json
-        
+
     - name: Commit scan results
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git add security-reports/
-        
-        # Only commit if there are changes
+
         if ! git diff --staged --quiet; then
           git commit -m "Update Semgrep scan results [skip ci]"
           git push
