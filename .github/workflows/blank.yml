@@ -52,7 +52,7 @@ jobs:
 
     - name: Convert Semgrep JSON to CSV
       run: |
-        python3 .github/scripts/semgrep_json_to_csv.py \
+        python3 .github/scripts/semgrep_json_to_readable_csv.py \
           security-reports/${{ steps.run_scan.outputs.file_name }} \
           security-reports/results.csv
 
