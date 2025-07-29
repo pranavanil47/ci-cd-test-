@@ -9,7 +9,7 @@ on:
 
 jobs:
   semgrep:
-    name: Offline Semgrep SAST Scan
+    name: Offline Semgrep Scan
     runs-on: ubuntu-latest
 
     permissions:
@@ -22,34 +22,38 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Install rsync and Semgrep CLI
+    - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y rsync
         python3 -m pip install semgrep
 
-    - name: Setup SSH and Download Offline Rules
+    - name: Setup SSH and Download Custom Rules
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H 104.197.251.175 >> ~/.ssh/known_hosts
 
-        # Download rules from your VM to ./custom-semgrep-rules
+        # Download rules to local folder
         rsync -avz -e "ssh -i ~/.ssh/id_rsa" \
           pranavanil123@104.197.251.175:/home/pranavanil123/Semgrep-rules ./custom-semgrep-rules
 
-    - name: Run Semgrep with Offline Rules
+    - name: Run Semgrep with Custom Rules (code-only)
       id: run_scan
       run: |
         mkdir -p security-reports
         TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-        semgrep scan --config ./custom-semgrep-rules --json \
-          --json-output=security-reports/semgrep-results-${TIMESTAMP}.json
-
+        
+        # Only scan code, exclude the rules and workflow folders
+        semgrep scan --config ./custom-semgrep-rules . \
+          --exclude=custom-semgrep-rules \
+          --exclude=.github \
+          --json --json-output=security-reports/semgrep-results-${TIMESTAMP}.json
+        
         echo "file_name=semgrep-results-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
 
-    - name: Upload JSON to your VM
+    - name: Upload Scan Result to VM
       run: |
         FILE_NAME=${{ steps.run_scan.outputs.file_name }}
         scp -i ~/.ssh/id_rsa security-reports/$FILE_NAME \
