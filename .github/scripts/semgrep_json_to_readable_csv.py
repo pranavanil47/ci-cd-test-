@@ -17,7 +17,7 @@ def extract_value(meta, keys):
     return val
 
 def convert_semgrep_json_to_csv(json_path, csv_path):
-    with open(json_path, 'r') as f:
+    with open(json_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
     results = data.get("results", [])
@@ -32,6 +32,8 @@ def convert_semgrep_json_to_csv(json_path, csv_path):
             "End Line",
             "Message",
             "Fix Recommendation",
+            "Rule ID",
+            "Fixes",
             "Likelihood",
             "Impact",
             "Confidence",
@@ -55,11 +57,13 @@ def convert_semgrep_json_to_csv(json_path, csv_path):
                 r.get("end", {}).get("line", ""),
                 extra.get("message", ""),
                 extra.get("fix", ""),
+                extra.get("rule_id", ""),
+                "; ".join(extra.get("fixes", [])) if isinstance(extra.get("fixes"), list) else "",
                 metadata.get("likelihood", ""),
                 metadata.get("impact", ""),
                 metadata.get("confidence", ""),
                 metadata.get("category", ""),
-                "; ".join(metadata.get("cwe", [])),
+                "; ".join(metadata.get("cwe", [])) if isinstance(metadata.get("cwe"), list) else "",
                 metadata.get("owasp", ["", ""])[0] if isinstance(metadata.get("owasp"), list) else "",
                 metadata.get("owasp", ["", ""])[1] if isinstance(metadata.get("owasp"), list) and len(metadata["owasp"]) > 1 else "",
                 metadata.get("references", [""])[0] if isinstance(metadata.get("references"), list) else "",
