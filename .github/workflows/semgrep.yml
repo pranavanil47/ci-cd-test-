@@ -26,10 +26,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y curl jq rsync
-          # Pin to the latest available stable OpenGrep release.
-          wget https://github.com/opengrep/opengrep/releases/download/v1.7.0/opengrep-linux-amd64 -O opengrep
-          chmod +x opengrep
-          sudo mv opengrep /usr/local/bin/opengrep
+          curl -fsSL https://raw.githubusercontent.com/opengrep/opengrep/main/install.sh | bash
           opengrep --version
 
       - name: Setup SSH and Download Custom Rules
