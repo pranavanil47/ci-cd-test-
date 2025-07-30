@@ -26,14 +26,12 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y curl jq rsync
+
+        # Install OpenGrep
         curl -fsSL https://raw.githubusercontent.com/opengrep/opengrep/main/install.sh | bash
 
-        # Add OpenGrep to PATH for the current shell session
-        export PATH="/home/runner/.opengrep/cli/latest:$PATH"
-
-        # Check version to confirm install
-        opengrep --version
-
+        # Add OpenGrep to PATH for future steps
+        echo "PATH=/home/runner/.opengrep/cli/latest:\$PATH" >> $GITHUB_ENV
 
     - name: Setup SSH and Download Custom Rules
       run: |
