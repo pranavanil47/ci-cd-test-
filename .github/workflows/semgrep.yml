@@ -26,8 +26,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y curl jq rsync
-          # Always download the latest OpenGrep binary
-          wget https://github.com/opengrep/opengrep/releases/latest/download/opengrep-linux-amd64 -O opengrep
+          # Pin to the latest working OpenGrep version (check releases!)
+          wget https://github.com/opengrep/opengrep/releases/download/v1.7.0/opengrep-linux-amd64 -O opengrep
           chmod +x opengrep
           sudo mv opengrep /usr/local/bin/opengrep
           # Verify installation
@@ -38,7 +38,6 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          # Update this IP and username if needed
           ssh-keyscan -H 34.27.77.137 >> ~/.ssh/known_hosts
           rsync -avz -e "ssh -i ~/.ssh/id_rsa" \
             pranavanil123@34.27.77.137:/home/pranavanil123/Semgrep-rules ./custom-opengrep-rules
