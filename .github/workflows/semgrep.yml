@@ -1,4 +1,4 @@
-name: Semgrep Offline Security Scan
+name: OpenGrep Offline Security Scan
 
 on:
   push:
@@ -8,8 +8,8 @@ on:
   workflow_dispatch: {}
 
 jobs:
-  semgrep:
-    name: Offline Semgrep Scan
+  opengrep:
+    name: Offline OpenGrep Scan
     runs-on: ubuntu-latest
 
     permissions:
@@ -27,7 +27,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y rsync
         python3 --version
-        python3 -m pip install semgrep
+        python3 -m pip install opengrep-cli
 
     - name: Setup SSH and Download Custom Rules
       run: |
@@ -37,21 +37,21 @@ jobs:
         ssh-keyscan -H 34.60.224.76 >> ~/.ssh/known_hosts
 
         rsync -avz -e "ssh -i ~/.ssh/id_rsa" \
-          pranavanil123@34.60.224.76:/home/pranavanil123/yaml ./custom-semgrep-rules
+          pranavanil123@34.27.77.137:/home/pranavanil123/Semgrep-rules ./custom-opengrep-rules
 
-    - name: Run Semgrep with Custom Rules
+    - name: Run OpenGrep with Custom Rules
       id: run_scan
       run: |
         mkdir -p security-reports
         TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-        semgrep scan --config ./custom-semgrep-rules . \
-          --exclude=custom-semgrep-rules \
-          --exclude=.github \
-          --json --json-output=security-reports/semgrep-results-${TIMESTAMP}.json
+        opengrep scan --config ./custom-opengrep-rules --path . \
+          --exclude custom-opengrep-rules \
+          --exclude .github \
+          --json > security-reports/opengrep-results-${TIMESTAMP}.json
 
-        echo "file_name=semgrep-results-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
+        echo "file_name=opengrep-results-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
 
-    - name: Convert Semgrep JSON to CSV
+    - name: Convert OpenGrep JSON to CSV
       run: |
         python3 .github/scripts/semgrep_json_to_readable_csv.py \
           security-reports/${{ steps.run_scan.outputs.file_name }} \
@@ -60,4 +60,4 @@ jobs:
     - name: Upload CSV to remote VM
       run: |
         scp -i ~/.ssh/id_rsa security-reports/results.csv \
-          pranavanil123@34.60.224.76:/home/pranavanil123/semgrep_findings/
+          pranavanil123@34.27.77.137:/home/pranavanil123/semgrep_findings/
