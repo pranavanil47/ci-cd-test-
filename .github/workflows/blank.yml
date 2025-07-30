@@ -33,10 +33,10 @@ jobs:
         mkdir -p ~/.ssh
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H 104.197.251.175 >> ~/.ssh/known_hosts
+        ssh-keyscan -H 34.122.30.74 >> ~/.ssh/known_hosts
 
         rsync -avz -e "ssh -i ~/.ssh/id_rsa" \
-          pranavanil123@104.197.251.175:/home/pranavanil123/Semgrep-rules ./custom-semgrep-rules
+          pranavanil123@34.122.30.74:/home/pranavanil123/Semgrep-rules ./custom-semgrep-rules
 
     - name: Run Semgrep with Custom Rules
       id: run_scan
@@ -59,4 +59,4 @@ jobs:
     - name: Upload CSV to remote VM
       run: |
         scp -i ~/.ssh/id_rsa security-reports/results.csv \
-          pranavanil123@104.197.251.175:/home/pranavanil123/semgrep_findings/
+          pranavanil123@34.122.30.74:/home/pranavanil123/semgrep_findings/
