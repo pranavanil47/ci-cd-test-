@@ -27,7 +27,13 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y curl jq rsync
         curl -fsSL https://raw.githubusercontent.com/opengrep/opengrep/main/install.sh | bash
+
+        # Add OpenGrep to PATH for the current shell session
+        export PATH="/home/runner/.opengrep/cli/latest:$PATH"
+
+        # Check version to confirm install
         opengrep --version
+
 
     - name: Setup SSH and Download Custom Rules
       run: |
