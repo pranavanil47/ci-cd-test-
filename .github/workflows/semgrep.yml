@@ -27,11 +27,13 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y curl jq rsync
 
-        # Install OpenGrep
-        curl -fsSL https://raw.githubusercontent.com/opengrep/opengrep/main/install.sh | bash
+        # Download latest OpenGrep binary
+        wget https://github.com/opengrep/opengrep/releases/latest/download/opengrep-linux-amd64 -O opengrep
+        chmod +x opengrep
+        sudo mv opengrep /usr/local/bin/opengrep
 
-        # ✅ Prepend OpenGrep path to system PATH
-        echo 'PATH="/home/runner/.opengrep/cli/latest:$PATH"' >> $GITHUB_ENV
+        # Verify installation
+        opengrep --version
 
     - name: Setup SSH and Download Custom Rules
       run: |
