@@ -2,9 +2,9 @@ name: OpenGrep Offline Security Scan
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch: {}
 
 jobs:
@@ -46,7 +46,7 @@ jobs:
           export PATH="$HOME/.opengrep/cli/latest:$PATH"
           mkdir -p security-reports
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-          opengrep scan -f ./custom-opengrep-rules --path . \
+          opengrep scan -f ./custom-opengrep-rules . \
             --exclude custom-opengrep-rules \
             --exclude .github \
             --json > security-reports/opengrep-results-${TIMESTAMP}.json
