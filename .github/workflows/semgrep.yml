@@ -27,6 +27,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y curl jq rsync
           curl -fsSL https://raw.githubusercontent.com/opengrep/opengrep/main/install.sh | bash
+          echo 'export PATH="$HOME/.opengrep/cli/latest:$PATH"' >> $GITHUB_ENV
+          export PATH="$HOME/.opengrep/cli/latest:$PATH"
           opengrep --version
 
       - name: Setup SSH and Download Custom Rules
@@ -41,6 +43,7 @@ jobs:
       - name: Run OpenGrep with Custom Rules
         id: run_scan
         run: |
+          export PATH="$HOME/.opengrep/cli/latest:$PATH"
           mkdir -p security-reports
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
           opengrep scan -f ./custom-opengrep-rules --path . \
@@ -51,6 +54,7 @@ jobs:
 
       - name: Convert OpenGrep JSON to CSV
         run: |
+          export PATH="$HOME/.opengrep/cli/latest:$PATH"
           python3 .github/scripts/semgrep_json_to_readable_csv.py \
             security-reports/${{ steps.run_scan.outputs.file_name }} \
             security-reports/results.csv
