@@ -30,8 +30,8 @@ jobs:
         # Install OpenGrep
         curl -fsSL https://raw.githubusercontent.com/opengrep/opengrep/main/install.sh | bash
 
-        # Add OpenGrep to PATH for future steps
-        echo "PATH=/home/runner/.opengrep/cli/latest:\$PATH" >> $GITHUB_ENV
+        # ✅ Prepend OpenGrep path to system PATH
+        echo 'PATH="/home/runner/.opengrep/cli/latest:$PATH"' >> $GITHUB_ENV
 
     - name: Setup SSH and Download Custom Rules
       run: |
