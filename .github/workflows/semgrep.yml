@@ -2,9 +2,9 @@ name: Semgrep Offline Security Scan
 
 on:
   push:
-    branches: [ main, develop, test ]  # include test if needed
+    branches: [ test_branch ]  # include test if needed
   pull_request:
-    branches: [ main ]
+    branches: [ test_branch ]
   workflow_dispatch: {}
 
 jobs:
