@@ -26,25 +26,32 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y rsync
+        python3 --version
         python3 -m pip install semgrep
-
-
-
-    - name: Run Semgrep with Custom Rules (code-only)
+    - name: Setup SSH and Download Custom Rules
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H 34.60.224.76 >> ~/.ssh/known_hosts
+        rsync -avz -e "ssh -i ~/.ssh/id_rsa" \
+          pranavanil123@34.60.224.76:/home/pranavanil123/yaml ./custom-semgrep-rules
+    - name: Run Semgrep with Custom Rules
       id: run_scan
       run: |
         mkdir -p security-reports
         TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-        
-        # Only scan code, exclude the rules and workflow folders
-        semgrep scan --config auto . \
+        semgrep scan --config ./custom-semgrep-rules . \
+          --exclude=custom-semgrep-rules \
           --exclude=.github \
           --json --json-output=security-reports/semgrep-results-${TIMESTAMP}.json
-        
         echo "file_name=semgrep-results-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
-
-    - name: Upload Scan Result to VM
+    - name: Convert Semgrep JSON to CSV
       run: |
-        FILE_NAME=${{ steps.run_scan.outputs.file_name }}
-        scp -i ~/.ssh/id_rsa security-reports/$FILE_NAME \
-          pranavanil123@34.55.77.225:/home/pranavanil123/semgrep_findings/
+        python3 .github/scripts/semgrep_json_to_readable_csv.py \
+          security-reports/${{ steps.run_scan.outputs.file_name }} \
+          security-reports/results.csv
+    - name: Upload CSV to remote VM
+      run: |
+        scp -i ~/.ssh/id_rsa security-reports/results.csv \
+          pranavanil123@34.60.224.76:/home/pranavanil123/semgrep_findings/
