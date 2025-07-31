@@ -40,7 +40,7 @@ jobs:
           rsync -avz -e "ssh -i ~/.ssh/id_rsa" \
             pranavanil123@34.27.77.137:/home/pranavanil123/Semgrep-rules ./custom-opengrep-rules
 
-      - name: Run OpenGrep with Custom Rules
+      - name: Run OpenGrep with Custom Rules (JSON output)
         id: run_scan
         run: |
           export PATH="$HOME/.opengrep/cli/latest:$PATH"
@@ -49,10 +49,17 @@ jobs:
           opengrep scan -f ./custom-opengrep-rules . \
             --exclude custom-opengrep-rules \
             --exclude .github \
-            --sarif > security-reports/opengrep-results-${TIMESTAMP}.sarif.json
-          echo "file_name=opengrep-results-${TIMESTAMP}.sarif.json" >> $GITHUB_OUTPUT
+            --json > security-reports/opengrep-results-${TIMESTAMP}.json
+          echo "file_name=opengrep-results-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
 
-      - name: Upload SARIF JSON to remote VM
+      - name: Convert OpenGrep JSON to CSV
         run: |
-          scp -i ~/.ssh/id_rsa security-reports/${{ steps.run_scan.outputs.file_name }} \
-            pranavanil123@34.27.77.137:/home/pranavanil123/semgrep_findings/
+          export PATH="$HOME/.opengrep/cli/latest:$PATH"
+          python3 .github/scripts/semgrep_json_to_readable_csv.py \
+            security-reports/${{ steps.run_scan.outputs.file_name }} \
+            security-reports/results.csv
+
+      - name: Upload CSV to remote VM
+        run: |
+          scp -i ~/.ssh/id_rsa security-reports/results.csv \
+            pranavanil123@34.55.77.225:/home/pranavanil123/semgrep_findings/
