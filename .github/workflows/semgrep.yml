@@ -28,16 +28,7 @@ jobs:
         sudo apt-get install -y rsync
         python3 -m pip install semgrep
 
-    - name: Setup SSH and Download Custom Rules
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H 104.197.251.175 >> ~/.ssh/known_hosts
 
-        # Download rules to local folder
-        rsync -avz -e "ssh -i ~/.ssh/id_rsa" \
-          pranavanil123@104.197.251.175:/home/pranavanil123/Semgrep-rules ./custom-semgrep-rules
 
     - name: Run Semgrep with Custom Rules (code-only)
       id: run_scan
