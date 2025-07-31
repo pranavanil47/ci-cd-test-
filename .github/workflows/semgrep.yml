@@ -1,15 +1,13 @@
-name: Semgrep Offline Security Scan
+name: Semgrep Pull Request Security Scan
 
 on:
-  push:
-    branches: [ test_branch ]  # include test if needed
   pull_request:
-    branches: [ test_branch ]
-  workflow_dispatch: {}
+    branches: [ test ]  # only run when PR targets the 'test' branch
+  workflow_dispatch: {} # optional manual trigger
 
 jobs:
   semgrep:
-    name: Offline Semgrep Scan
+    name: Semgrep PR Scan
     runs-on: ubuntu-latest
 
     permissions:
@@ -26,7 +24,6 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y rsync jq
-        python3 --version
         python3 -m pip install semgrep
 
     - name: Setup SSH and Download Custom Rules
@@ -50,13 +47,12 @@ jobs:
         echo "file_name=semgrep-results-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
 
     - name: Fail on Critical Findings
-      if: github.ref == 'refs/heads/test'  # Only fail for the 'test' branch
       run: |
         CRITICAL_COUNT=$(jq '[.results[] | select(.extra.severity == "CRITICAL")] | length' \
           security-reports/${{ steps.run_scan.outputs.file_name }})
         echo "Found $CRITICAL_COUNT critical issues"
         if [ "$CRITICAL_COUNT" -gt 0 ]; then
-          echo "❌ Critical issues found. Blocking push to 'test' branch."
+          echo "❌ Critical issues found. Blocking PR to 'test' branch."
           exit 1
         fi
 
