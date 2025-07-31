@@ -2,7 +2,7 @@ name: Semgrep Pull Request Security Scan
 
 on:
   pull_request:
-    branches: [ test ]  # only run when PR targets the 'test' branch
+    branches: [ test_branch ]  # only run when PR targets the 'test' branch
   workflow_dispatch: {} # optional manual trigger
 
 jobs:
