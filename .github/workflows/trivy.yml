@@ -29,8 +29,8 @@ jobs:
       - name: Install Parlay 
         run: |
           PARLAY_VERSION=0.9.0
-          wget https://github.com/snyk/parlay/releases/download/v${PARLAY_VERSION}/parlay_${PARLAY_VERSION}_linux_amd64.tar.gz
-          tar -xzf parlay_${PARLAY_VERSION}_linux_amd64.tar.gz
+          wget https://github.com/snyk/parlay/releases/download/v0.9.0/parlay_Darwin_arm64.tar.gz
+          tar -xvf parlay_Darwin_arm64.tar.gz
           sudo mv parlay /usr/local/bin/parlay
           parlay version
 
