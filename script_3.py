@@ -1,0 +1,35 @@
+# 2. Create vulnerable Python application
+requirements_txt = '''# Vulnerable Python dependencies for Trivy testing
+Django==1.11.0          # Multiple CVEs including SQL injection
+Flask==0.12.2            # Multiple security issues
+Jinja2==2.7.2           # Template injection CVE-2019-10906
+Werkzeug==0.11.10       # Multiple CVEs
+requests==2.19.1        # CVE-2018-18074
+urllib3==1.24.1         # Multiple CVEs
+Pillow==5.2.0           # Multiple image processing CVEs
+PyYAML==3.12            # CVE-2017-18342 arbitrary code execution
+cryptography==2.3      # Multiple cryptographic vulnerabilities
+paramiko==2.4.0         # SSH vulnerabilities
+SQLAlchemy==1.2.0       # SQL injection potential
+lxml==4.2.1             # XML external entity (XXE) vulnerabilities
+beautifulsoup4==4.6.0   # XSS vulnerabilities in parsing
+selenium==3.8.0         # Multiple security issues
+tornado==4.5.0          # Multiple CVEs
+twisted==17.5.0         # Multiple security vulnerabilities
+celery==4.2.0           # Pickle deserialization vulnerabilities
+redis==2.10.6           # Multiple CVEs
+psycopg2==2.7.3         # SQL injection potential
+mysql-connector-python==8.0.11  # Multiple CVEs
+pycrypto==2.6.1         # Deprecated with security issues
+pyopenssl==17.5.0       # Multiple TLS vulnerabilities
+nltk==3.3               # Arbitrary code execution via pickled models
+numpy==1.14.0           # Buffer overflow vulnerabilities
+scipy==1.1.0            # Potential security issues
+pandas==0.23.0          # Multiple CVEs
+matplotlib==2.2.0       # Multiple CVEs
+'''
+
+with open("vulnerable-python-app/requirements.txt", "w") as f:
+    f.write(requirements_txt)
+
+print("Created requirements.txt with vulnerable Python dependencies")
