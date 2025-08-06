@@ -57,7 +57,7 @@ jobs:
         run: |
           mkdir -p security-reports
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-          trivy sbom --format cyclonedx \
+          trivy fs --format spdx-json \
             --output security-reports/trivy-sbom-${TIMESTAMP}.json .
           echo "sbom_file=trivy-sbom-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
 
