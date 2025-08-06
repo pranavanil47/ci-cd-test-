@@ -11,14 +11,14 @@ permissions:
 
 jobs:
   trivy:
-    name: Run Trivy SCA and SBOM
+    name: Run Trivy SCA and SBOM + Parlay Enrichment
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Trivy (Pinned Version)
+      - name: Install Trivy (Pinned)
         run: |
           sudo apt-get update
           sudo apt-get install -y wget curl jq
@@ -26,9 +26,9 @@ jobs:
           wget https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.deb
           sudo dpkg -i trivy_${TRIVY_VERSION}_Linux-64bit.deb
 
-      - name: Install Parlay (Pinned Version)
+      - name: Install Parlay (Pinned Stable)
         run: |
-          PARLAY_VERSION=0.6.4
+          PARLAY_VERSION=0.9.0
           wget https://github.com/snyk/parlay/releases/download/v${PARLAY_VERSION}/parlay_${PARLAY_VERSION}_linux_amd64.tar.gz
           tar -xzf parlay_${PARLAY_VERSION}_linux_amd64.tar.gz
           sudo mv parlay /usr/local/bin/parlay
@@ -41,7 +41,6 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H 34.59.19.208 >> ~/.ssh/known_hosts
 
-      # ------------ Trivy SCA ------------
       - name: Run Trivy SCA (Filesystem Scan)
         id: sca
         run: |
@@ -52,14 +51,12 @@ jobs:
             --output security-reports/trivy-sca-${TIMESTAMP}.json .
           echo "sca_file=trivy-sca-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
 
-      - name: Upload Trivy SCA Result to VM
+      - name: Upload Trivy SCA to VM
         run: |
-          FILE_NAME=${{ steps.sca.outputs.sca_file }}
-          scp -i ~/.ssh/id_rsa security-reports/$FILE_NAME \
+          scp -i ~/.ssh/id_rsa security-reports/${{ steps.sca.outputs.sca_file }} \
             pranavanil123@34.59.19.208:/home/pranavanil123/findings/trivy_sca/
 
-      # ------------ Trivy SBOM ------------
-      - name: Run Trivy SBOM (SPDX‑JSON)
+      - name: Run Trivy SBOM (SPDX-JSON)
         id: sbom
         run: |
           mkdir -p security-reports
@@ -78,6 +75,5 @@ jobs:
 
       - name: Upload Enriched SBOM to VM
         run: |
-          FILE_NAME=${{ steps.enrich.outputs.enriched_file }}
-          scp -i ~/.ssh/id_rsa security-reports/$FILE_NAME \
+          scp -i ~/.ssh/id_rsa security-reports/${{ steps.enrich.outputs.enriched_file }} \
             pranavanil123@34.59.19.208:/home/pranavanil123/findings/trivy_SBOM/
