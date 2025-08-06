@@ -29,8 +29,8 @@ jobs:
       - name: Install Parlay (Pinned Version)
         run: |
           PARLAY_VERSION=0.1.4
-          wget https://github.com/snyk/parlay/releases/download/v${PARLAY_VERSION}/parlay_linux_amd64.tar.gz
-          tar -xzf parlay_linux_amd64.tar.gz
+          wget https://github.com/snyk/parlay/releases/download/v${PARLAY_VERSION}/parlay_${PARLAY_VERSION}_linux_amd64.tar.gz
+          tar -xzf parlay_${PARLAY_VERSION}_linux_amd64.tar.gz
           sudo mv parlay /usr/local/bin/parlay
           parlay version
 
