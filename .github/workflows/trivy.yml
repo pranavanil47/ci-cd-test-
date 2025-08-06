@@ -13,7 +13,7 @@ jobs:
   trivy:
     name: Run Trivy SCA and SBOM
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}  # Run only if Semgrep succeeds
+    
 
     steps:
       - name: Checkout code
