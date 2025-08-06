@@ -28,7 +28,7 @@ jobs:
 
       - name: Install Parlay (Pinned Version)
         run: |
-          PARLAY_VERSION=0.1.4
+          PARLAY_VERSION=0.6.4
           wget https://github.com/snyk/parlay/releases/download/v${PARLAY_VERSION}/parlay_${PARLAY_VERSION}_linux_amd64.tar.gz
           tar -xzf parlay_${PARLAY_VERSION}_linux_amd64.tar.gz
           sudo mv parlay /usr/local/bin/parlay
@@ -59,7 +59,7 @@ jobs:
             pranavanil123@34.59.19.208:/home/pranavanil123/findings/trivy_sca/
 
       # ------------ Trivy SBOM ------------
-      - name: Run Trivy SBOM (spdx-json)
+      - name: Run Trivy SBOM (SPDX‑JSON)
         id: sbom
         run: |
           mkdir -p security-reports
@@ -71,10 +71,10 @@ jobs:
       - name: Enrich SBOM with Parlay
         id: enrich
         run: |
-          INPUT_FILE=security-reports/${{ steps.sbom.outputs.sbom_file }}
-          OUTPUT_FILE=security-reports/enriched-${{ steps.sbom.outputs.sbom_file }}
-          parlay ecosystems enrich $INPUT_FILE | parlay snyk enrich - > $OUTPUT_FILE
-          echo "enriched_file=$(basename $OUTPUT_FILE)" >> $GITHUB_OUTPUT
+          INPUT=security-reports/${{ steps.sbom.outputs.sbom_file }}
+          OUTPUT=security-reports/enriched-${{ steps.sbom.outputs.sbom_file }}
+          parlay ecosystems enrich $INPUT | parlay snyk enrich - > $OUTPUT
+          echo "enriched_file=$(basename $OUTPUT)" >> $GITHUB_OUTPUT
 
       - name: Upload Enriched SBOM to VM
         run: |
