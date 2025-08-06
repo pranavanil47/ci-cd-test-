@@ -57,4 +57,4 @@ jobs:
       run: |
         FILE_NAME=${{ steps.run_scan.outputs.file_name }}
         scp -i ~/.ssh/id_rsa security-reports/$FILE_NAME \
-          pranavanil123@34.59.19.208:/home/pranavanil123/semgrep_findings/
+          pranavanil123@34.59.19.208:/home/pranavanil123/findings/semgrep/
