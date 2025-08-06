@@ -1,13 +1,15 @@
-name: Semgrep Pull Request Security Scan
+name: Semgrep Offline Security Scan
 
 on:
+  push:
+    branches: [ main, develop ]
   pull_request:
-    branches: [ test_branch ]  # only run when PR targets the 'test' branch
-  workflow_dispatch: {} # optional manual trigger
+    branches: [ main ]
+  workflow_dispatch: {}
 
 jobs:
   semgrep:
-    name: Semgrep PR Scan
+    name: Offline Semgrep Scan
     runs-on: ubuntu-latest
 
     permissions:
@@ -23,48 +25,36 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y rsync jq
+        sudo apt-get install -y rsync
         python3 -m pip install semgrep
-        semgrep --version
 
     - name: Setup SSH and Download Custom Rules
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H 34.55.77.225 >> ~/.ssh/known_hosts
-        rsync -avz -e "ssh -i ~/.ssh/id_rsa" \
-          pranavanil123@34.55.77.225:/home/pranavanil123/Semgrep-rules ./custom-semgrep-rules
+        ssh-keyscan -H 34.59.19.208 >> ~/.ssh/known_hosts
 
-    - name: Run Semgrep with Custom Rules
+        # Download rules to local folder
+        rsync -avz -e "ssh -i ~/.ssh/id_rsa" \
+          pranavanil123@34.59.19.208:/home/pranavanil123/testing/Semgrep-rules ./custom-semgrep-rules
+
+    - name: Run Semgrep with Custom Rules (code-only)
       id: run_scan
       run: |
         mkdir -p security-reports
         TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+        
+        # Only scan code, exclude the rules and workflow folders
         semgrep scan --config ./custom-semgrep-rules . \
           --exclude=custom-semgrep-rules \
           --exclude=.github \
           --json --json-output=security-reports/semgrep-results-${TIMESTAMP}.json
+        
         echo "file_name=semgrep-results-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
 
-    - name: Fail on Critical Findings
+    - name: Upload Scan Result to VM
       run: |
-        CRITICAL_COUNT=$(jq '[.results[] | select(.extra.severity == "CRITICAL")] | length' \
-          security-reports/${{ steps.run_scan.outputs.file_name }})
-        echo "Found $CRITICAL_COUNT critical issues"
-        if [ "$CRITICAL_COUNT" -gt 0 ]; then
-          echo "❌ Critical issues found. Blocking PR to 'test' branch."
-          exit 1
-        fi
-
-    - name: Convert Semgrep JSON to CSV
-      run: |
-        python3 .github/scripts/semgrep_json_to_readable_csv.py \
-          security-reports/${{ steps.run_scan.outputs.file_name }} \
-          security-reports/results.csv
-
-    - name: Upload CSV to remote VM
-      if: success()
-      run: |
-        scp -i ~/.ssh/id_rsa security-reports/results.csv \
-          pranavanil123@34.55.77.225:/home/pranavanil123/semgrep_findings/
+        FILE_NAME=${{ steps.run_scan.outputs.file_name }}
+        scp -i ~/.ssh/id_rsa security-reports/$FILE_NAME \
+          pranavanil123@34.59.19.208:/home/pranavanil123/semgrep_findings/
