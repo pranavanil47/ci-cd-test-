@@ -1,4 +1,4 @@
-name: Semgrep + Trivy Security Scans
+name: Semgrep Offline Security Scan
 
 on:
   push:
@@ -8,8 +8,8 @@ on:
   workflow_dispatch: {}
 
 jobs:
-  security-scan:
-    name: Semgrep + Trivy Scan
+  semgrep:
+    name: Offline Semgrep Scan
     runs-on: ubuntu-latest
 
     permissions:
@@ -25,12 +25,8 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y rsync wget
+        sudo apt-get install -y rsync
         python3 -m pip install semgrep
-
-        # Install Trivy
-        wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_Linux-64bit.deb
-        sudo dpkg -i trivy_Linux-64bit.deb
 
     - name: Setup SSH and Download Custom Rules
       run: |
@@ -43,57 +39,22 @@ jobs:
         rsync -avz -e "ssh -i ~/.ssh/id_rsa" \
           pranavanil123@34.59.19.208:/home/pranavanil123/testing/Semgrep-rules ./custom-semgrep-rules
 
-    # ---------------- SEMGREP ----------------
     - name: Run Semgrep with Custom Rules (code-only)
-      id: semgrep_scan
+      id: run_scan
       run: |
         mkdir -p security-reports
         TIMESTAMP=$(date +%Y%m%d-%H%M%S)
         
+        # Only scan code, exclude the rules and workflow folders
         semgrep scan --config ./custom-semgrep-rules . \
           --exclude=custom-semgrep-rules \
           --exclude=.github \
           --json --json-output=security-reports/semgrep-results-${TIMESTAMP}.json
         
-        echo "semgrep_file=semgrep-results-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
+        echo "file_name=semgrep-results-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
 
-    - name: Upload Semgrep Result to VM
+    - name: Upload Scan Result to VM
       run: |
-        FILE_NAME=${{ steps.semgrep_scan.outputs.semgrep_file }}
+        FILE_NAME=${{ steps.run_scan.outputs.file_name }}
         scp -i ~/.ssh/id_rsa security-reports/$FILE_NAME \
-          pranavanil123@34.59.19.208:/home/pranavanil123/findings/semgrep/
-
-    # ---------------- TRIVY SCA ----------------
-    - name: Run Trivy SCA (Filesystem Scan)
-      id: trivy_sca
-      run: |
-        mkdir -p security-reports
-        TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-        
-        trivy fs --security-checks vuln,secret,config --format json \
-          --output security-reports/trivy-sca-${TIMESTAMP}.json .
-        
-        echo "sca_file=trivy-sca-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
-
-    - name: Upload Trivy SCA Result to VM
-      run: |
-        FILE_NAME=${{ steps.trivy_sca.outputs.sca_file }}
-        scp -i ~/.ssh/id_rsa security-reports/$FILE_NAME \
-          pranavanil123@34.59.19.208:/home/pranavanil123/findings/trivy_sca/
-
-    # ---------------- TRIVY SBOM ----------------
-    - name: Generate Trivy SBOM (CycloneDX)
-      id: trivy_sbom
-      run: |
-        mkdir -p security-reports
-        TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-        
-        trivy sbom --format cyclonedx --output security-reports/trivy-sbom-${TIMESTAMP}.json .
-        
-        echo "sbom_file=trivy-sbom-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
-
-    - name: Upload Trivy SBOM to VM
-      run: |
-        FILE_NAME=${{ steps.trivy_sbom.outputs.sbom_file }}
-        scp -i ~/.ssh/id_rsa security-reports/$FILE_NAME \
-          pranavanil123@34.59.19.208:/home/pranavanil123/findings/trivy_SBOM/
+          pranavanil123@34.59.19.208:/home/pranavanil123/semgrep_findings/
