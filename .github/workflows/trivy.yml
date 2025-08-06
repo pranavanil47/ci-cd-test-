@@ -18,7 +18,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Trivy 
+      # ---------- Install Trivy ----------
+      - name: Install Trivy
         run: |
           sudo apt-get update
           sudo apt-get install -y wget curl jq
@@ -26,14 +27,15 @@ jobs:
           wget https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.deb
           sudo dpkg -i trivy_${TRIVY_VERSION}_Linux-64bit.deb
 
-      - name: Install Parlay 
+      # ---------- Install Parlay ----------
+      - name: Install Parlay
         run: |
           PARLAY_VERSION=0.9.0
-          wget https://github.com/snyk/parlay/releases/download/v0.9.0/parlay_Darwin_arm64.tar.gz
-          tar -xvf parlay_Darwin_arm64.tar.gz
-          sudo mv parlay /usr/local/bin/parlay
+          wget https://github.com/snyk/parlay/releases/download/v${PARLAY_VERSION}/parlay_${PARLAY_VERSION}_linux_amd64.deb
+          sudo dpkg -i parlay_${PARLAY_VERSION}_linux_amd64.deb
           parlay version
 
+      # ---------- Setup SSH ----------
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
@@ -41,6 +43,7 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H 34.59.19.208 >> ~/.ssh/known_hosts
 
+      # ---------- Run Trivy SCA ----------
       - name: Run Trivy SCA (Filesystem Scan)
         id: sca
         run: |
@@ -56,7 +59,8 @@ jobs:
           scp -i ~/.ssh/id_rsa security-reports/${{ steps.sca.outputs.sca_file }} \
             pranavanil123@34.59.19.208:/home/pranavanil123/findings/trivy_sca/
 
-      - name: Run Trivy SBOM (SPDX‑JSON)
+      # ---------- Run Trivy SBOM ----------
+      - name: Run Trivy SBOM (SPDX-JSON)
         id: sbom
         run: |
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
@@ -64,12 +68,13 @@ jobs:
             --output security-reports/trivy-sbom-${TIMESTAMP}.json .
           echo "sbom_file=trivy-sbom-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
 
+      # ---------- Enrich SBOM with Parlay (ecosystems + scorecard only) ----------
       - name: Enrich SBOM with Parlay
         id: enrich
         run: |
           INPUT=security-reports/${{ steps.sbom.outputs.sbom_file }}
           OUTPUT=security-reports/enriched-${{ steps.sbom.outputs.sbom_file }}
-          parlay ecosystems enrich $INPUT | parlay snyk enrich - > $OUTPUT
+          parlay ecosystems enrich "$INPUT" | parlay scorecard enrich - > "$OUTPUT"
           echo "enriched_file=$(basename $OUTPUT)" >> $GITHUB_OUTPUT
 
       - name: Upload Enriched SBOM to VM
