@@ -1,23 +1,24 @@
-name: Trivy Security Scan with Parlay Enrichment
+name: Trivy Security Scan + SBOM Enrichment
 
 on:
   workflow_run:
     workflows: ["Semgrep Offline Security Scan"]
-    types: [completed]
+    types:
+      - completed
 
 permissions:
   contents: read
 
 jobs:
   trivy:
-    name: Run Trivy SCA and SBOM + Parlay Enrichment
+    name: Trivy SCA and Enriched SBOM
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Trivy
+      - name: Install Trivy (Pinned: 0.65.0)
         run: |
           sudo apt-get update
           sudo apt-get install -y wget curl jq
@@ -25,9 +26,9 @@ jobs:
           wget https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.deb
           sudo dpkg -i trivy_${TRIVY_VERSION}_Linux-64bit.deb
 
-      - name: Install Parlay (pinned v0.7.0)
+      - name: Install Parlay (Pinned: 0.9.0)
         run: |
-          PARLAY_VERSION=0.7.0
+          PARLAY_VERSION=0.9.0
           wget https://github.com/snyk/parlay/releases/download/v${PARLAY_VERSION}/parlay_${PARLAY_VERSION}_linux_amd64.tar.gz
           tar -xzf parlay_${PARLAY_VERSION}_linux_amd64.tar.gz
           sudo mv parlay /usr/local/bin/parlay
@@ -45,17 +46,17 @@ jobs:
         run: |
           mkdir -p security-reports
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-          trivy fs --security-checks vuln,config,secret \
+          trivy fs --security-checks vuln,secret,config \
             --format json \
             --output security-reports/trivy-sca-${TIMESTAMP}.json .
           echo "sca_file=trivy-sca-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
 
-      - name: Upload SCA Result
+      - name: Upload Trivy SCA to VM
         run: |
           scp -i ~/.ssh/id_rsa security-reports/${{ steps.sca.outputs.sca_file }} \
             pranavanil123@34.59.19.208:/home/pranavanil123/findings/trivy_sca/
 
-      - name: Run Trivy SBOM (SPDX-JSON)
+      - name: Run Trivy SBOM (SPDX‑JSON)
         id: sbom
         run: |
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
@@ -71,7 +72,7 @@ jobs:
           parlay ecosystems enrich $INPUT | parlay snyk enrich - > $OUTPUT
           echo "enriched_file=$(basename $OUTPUT)" >> $GITHUB_OUTPUT
 
-      - name: Upload Enriched SBOM
+      - name: Upload Enriched SBOM to VM
         run: |
           scp -i ~/.ssh/id_rsa security-reports/${{ steps.enrich.outputs.enriched_file }} \
             pranavanil123@34.59.19.208:/home/pranavanil123/findings/trivy_SBOM/
