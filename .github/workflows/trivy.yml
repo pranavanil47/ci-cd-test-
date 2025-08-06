@@ -33,7 +33,7 @@ jobs:
           PARLAY_VERSION=0.9.0
           wget https://github.com/snyk/parlay/releases/download/v${PARLAY_VERSION}/parlay_${PARLAY_VERSION}_linux_amd64.deb
           sudo dpkg -i parlay_${PARLAY_VERSION}_linux_amd64.deb
-          parlay version
+          parlay --help
 
       # ---------- Setup SSH ----------
       - name: Setup SSH
@@ -68,7 +68,7 @@ jobs:
             --output security-reports/trivy-sbom-${TIMESTAMP}.json .
           echo "sbom_file=trivy-sbom-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
 
-      # ---------- Enrich SBOM with Parlay (ecosystems + scorecard only) ----------
+      # ---------- Enrich SBOM with Parlay ----------
       - name: Enrich SBOM with Parlay
         id: enrich
         run: |
