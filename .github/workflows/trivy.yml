@@ -58,7 +58,7 @@ jobs:
         run: |
           scp -i ~/.ssh/id_rsa security-reports/${{ steps.sca.outputs.sca_file }} \
             pranavanil123@34.59.19.208:/home/pranavanil123/findings/trivy_sca/
-          curl -X POST https://391eb398-1c11-4d32-ab6f-92fd6dc89fe1-00-2ua28acjof5z6.kirk.replit.dev/api/upload/Sample-Project/sca -H "Content-Type: application/json" -d @${{ steps.sca.outputs.enriched_file }}
+          curl -X POST https://391eb398-1c11-4d32-ab6f-92fd6dc89fe1-00-2ua28acjof5z6.kirk.replit.dev/api/upload/Sample-Project/sca -H "Content-Type: application/json" -d @security-reports/${{ steps.sca.outputs.sca_file }}
 
       # ---------- Run Trivy SBOM ----------
       - name: Run Trivy SBOM (SPDX-JSON)
@@ -82,4 +82,4 @@ jobs:
         run: |
           scp -i ~/.ssh/id_rsa security-reports/${{ steps.enrich.outputs.enriched_file }} \
             pranavanil123@34.59.19.208:/home/pranavanil123/findings/trivy_SBOM/
-          curl -X POST https://391eb398-1c11-4d32-ab6f-92fd6dc89fe1-00-2ua28acjof5z6.kirk.replit.dev/api/upload/Sample-Project/sbom -H "Content-Type: application/json" -d @${{ steps.enrich.outputs.enriched_file }}
+          curl -X POST https://391eb398-1c11-4d32-ab6f-92fd6dc89fe1-00-2ua28acjof5z6.kirk.replit.dev/api/upload/Sample-Project/sbom -H "Content-Type: application/json" -d @security-reports/enriched-${{ steps.sbom.outputs.sbom_file }}
