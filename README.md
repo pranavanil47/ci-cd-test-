@@ -40,7 +40,7 @@ This collection contains intentionally vulnerable applications designed to test 
   - Struts 2.3.34 - Multiple RCE CVEs
   - And 15+ more vulnerable dependencies
 
-### 4. Go Vulnerable Application (`vulnerable-go-app/`)
+### 4. Go Vulnerable Application (`vulnerable-go-app/`) test
 - **Language:** Go
 - **Package Manager:** Go modules
 - **Key Vulnerabilities:**
