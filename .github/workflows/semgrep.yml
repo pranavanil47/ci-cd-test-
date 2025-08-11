@@ -43,7 +43,7 @@ jobs:
           mkdir -p security-reports
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
-          semgrep scan --config=auto \
+          semgrep scan --config ./custom-semgrep-rules . \
             --exclude=custom-semgrep-rules \
             --exclude=.github \
             --json --json-output=security-reports/semgrep-results-${TIMESTAMP}.json
@@ -58,8 +58,9 @@ jobs:
           cat > enrich_with_openai.py << 'EOF'
           import os
           import json
-          import openai
           import time
+          import openai
+          from openai.error import OpenAIError
 
           openai.api_key = os.getenv("OPENAI_API_KEY")
           file_name = "security-reports/" + os.getenv("FILE_NAME")
@@ -90,11 +91,14 @@ jobs:
                   )
                   enriched_text = response.choices[0].message.content
                   break
-              except openai.error.OpenAIError as e:
+              except OpenAIError as e:
                   print(f"[OpenAI] API error: {e}, retrying in {2**attempt} seconds...")
+                  if "insufficient_quota" in str(e):
+                      print("[OpenAI] Insufficient quota detected, stopping retries.")
+                      break
                   time.sleep(2 ** attempt)
           else:
-              print("[OpenAI] API unavailable after retries, using original findings as fallback.")
+              print("[OpenAI] API unavailable after retries or quota exceeded, using original findings as fallback.")
               enriched_text = json.dumps(findings)
 
           try:
