@@ -28,22 +28,13 @@ jobs:
           sudo apt-get install -y rsync python3-pip
           python3 -m pip install semgrep openai
 
-      - name: Setup SSH and Download Custom Rules
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H 34.59.19.208 >> ~/.ssh/known_hosts
-          rsync -avz -e "ssh -i ~/.ssh/id_rsa" \
-            pranavanil123@34.59.19.208:/home/pranavanil123/testing/Semgrep-rules ./custom-semgrep-rules
-
       - name: Run Semgrep with Custom Rules (code-only)
         id: run_scan
         run: |
           mkdir -p security-reports
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
-          semgrep scan --config ./custom-semgrep-rules . \
+          semgrep scan=auto ./custom-semgrep-rules . \
             --exclude=custom-semgrep-rules \
             --exclude=.github \
             --json --json-output=security-reports/semgrep-results-${TIMESTAMP}.json
