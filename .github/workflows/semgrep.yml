@@ -82,7 +82,7 @@ jobs:
           enriched = None
           for attempt in range(3):
               try:
-                  response = openai.ChatCompletion.create(
+                  response = openai.chat.completions.create(
                       model="gpt-4o-mini",
                       messages=[{"role": "user", "content": prompt}],
                       temperature=0.2,
