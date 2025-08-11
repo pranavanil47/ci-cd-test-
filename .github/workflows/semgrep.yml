@@ -52,7 +52,7 @@ jobs:
 
       - name: Enrich Semgrep Results with Gemini AI
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMENI_API_KEY }}
+          GEMENI_API_KEY: ${{ secrets.GEMENI_API_KEY }}
           FILE_NAME: ${{ steps.run_scan.outputs.file_name }}
         run: |
           cat > enrich_with_gemini.py << 'EOF'
@@ -61,7 +61,7 @@ jobs:
           import time
           import requests
 
-          api_key = os.getenv("GEMINI_API_KEY")
+          api_key = os.getenv("GEMENI_API_KEY")
           file_name = "security-reports/" + os.getenv("FILE_NAME")
 
           with open(file_name, "r") as f:
@@ -112,13 +112,29 @@ jobs:
                   json.dump(findings, f, indent=2)
               exit(0)
 
-          output_text = res.json()["candidates"][0]["message"]["content"]
+          response_json = res.json()
 
-          try:
-              enriched = json.loads(output_text)
-          except json.JSONDecodeError:
-              print("[Gemini] Returned invalid JSON. Using original file as fallback.")
+          output_text = ""
+          if "candidates" in response_json and len(response_json["candidates"]) > 0:
+              candidate = response_json["candidates"][0]
+              if "message" in candidate and "content" in candidate["message"]:
+                  output_text = candidate["message"]["content"]
+              else:
+                  print("[Gemini] 'message' or 'content' key missing in API response candidate:")
+                  print(candidate)
+          else:
+              print("[Gemini] 'candidates' key missing or empty in API response:")
+              print(response_json)
+
+          if not output_text:
+              print("[Gemini] No output text from API, using original findings as fallback.")
               enriched = findings
+          else:
+              try:
+                  enriched = json.loads(output_text)
+              except json.JSONDecodeError:
+                  print("[Gemini] Returned invalid JSON. Using original findings as fallback.")
+                  enriched = findings
 
           enriched_file = "security-reports/enriched-" + os.getenv("FILE_NAME")
           with open(enriched_file, "w") as f:
