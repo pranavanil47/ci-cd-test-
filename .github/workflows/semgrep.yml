@@ -1,4 +1,4 @@
-name: Semgrep Offline Security Scan
+name: Semgrep Offline Security Scan with AI Enrichment
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   semgrep:
-    name: Offline Semgrep Scan
+    name: Offline Semgrep Scan + AI Enrichment
     runs-on: ubuntu-latest
 
     permissions:
@@ -25,8 +25,8 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y rsync
-        python3 -m pip install semgrep
+        sudo apt-get install -y rsync python3-pip
+        python3 -m pip install semgrep requests
 
     - name: Setup SSH and Download Custom Rules
       run: |
@@ -34,8 +34,6 @@ jobs:
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H 34.59.19.208 >> ~/.ssh/known_hosts
-
-        # Download rules to local folder
         rsync -avz -e "ssh -i ~/.ssh/id_rsa" \
           pranavanil123@34.59.19.208:/home/pranavanil123/testing/Semgrep-rules ./custom-semgrep-rules
 
@@ -44,21 +42,89 @@ jobs:
       run: |
         mkdir -p security-reports
         TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-        
-        # Only scan code, exclude the rules and workflow folders
+
         semgrep scan --config ./custom-semgrep-rules . \
           --exclude=custom-semgrep-rules \
           --exclude=.github \
           --json --json-output=security-reports/semgrep-results-${TIMESTAMP}.json
-        
+
         echo "file_name=semgrep-results-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
 
-    - name: Upload Scan Result to VM
+    - name: Enrich Semgrep Results with Gemini AI
+      env:
+        GEMINI_API_KEY: ${{ secrets.GEMENI_API_KEY }}
+        FILE_NAME: ${{ steps.run_scan.outputs.file_name }}
       run: |
-        FILE_NAME=${{ steps.run_scan.outputs.file_name }}
-        
-        scp -i ~/.ssh/id_rsa security-reports/$FILE_NAME \
-          pranavanil123@34.59.19.208:/home/pranavanil123/findings/semgrep/
-          
-        curl -X POST https://391eb398-1c11-4d32-ab6f-92fd6dc89fe1-00-2ua28acjof5z6.kirk.replit.dev/api/upload/Sample-Project/sast -H "Content-Type: application/json" -d @security-reports/$FILE_NAME
+        cat > enrich_with_gemini.py << 'EOF'
+import json
+import os
+import requests
 
+api_key = os.getenv("GEMINI_API_KEY")
+file_name = "security-reports/" + os.getenv("FILE_NAME")
+
+with open(file_name, "r") as f:
+    findings = json.load(f)
+
+prompt = f"""
+You are a security code reviewer.
+You will be given a JSON file containing Semgrep findings.
+For each finding, add a new field 'ai_fix' with a short, clear, and secure fix suggestion.
+Return the result as valid JSON only.
+Input JSON:
+{json.dumps(findings)}
+"""
+
+url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
+
+headers = {"Content-Type": "application/json"}
+params = {"key": api_key}
+
+data = {
+    "contents": [
+        {
+            "parts": [{"text": prompt}]
+        }
+    ],
+    "generationConfig": {
+        "temperature": 0.2,
+        "maxOutputTokens": 8192
+    }
+}
+
+res = requests.post(url, headers=headers, params=params, json=data)
+res.raise_for_status()
+
+output_text = res.json()["candidates"][0]["content"]["parts"][0]["text"]
+
+try:
+    enriched = json.loads(output_text)
+except json.JSONDecodeError:
+    raise SystemExit("Gemini returned invalid JSON. Output was:\n" + output_text)
+
+enriched_file = "security-reports/enriched-" + os.getenv("FILE_NAME")
+with open(enriched_file, "w") as f:
+    json.dump(enriched, f, indent=2)
+
+print(f"Enriched file saved as {enriched_file}")
+EOF
+
+        python3 enrich_with_gemini.py
+
+    - name: Upload Raw and Enriched Results to VM
+      run: |
+        RAW_FILE=${{ steps.run_scan.outputs.file_name }}
+        ENRICHED_FILE=enriched-${{ steps.run_scan.outputs.file_name }}
+
+        scp -i ~/.ssh/id_rsa security-reports/$RAW_FILE \
+          pranavanil123@34.59.19.208:/home/pranavanil123/findings/semgrep/
+        
+        scp -i ~/.ssh/id_rsa security-reports/$ENRICHED_FILE \
+          pranavanil123@34.59.19.208:/home/pranavanil123/findings/semgrep/
+
+    - name: Send Enriched Results to API
+      run: |
+        ENRICHED_FILE=enriched-${{ steps.run_scan.outputs.file_name }}
+        curl -X POST https://391eb398-1c11-4d32-ab6f-92fd6dc89fe1-00-2ua28acjof5z6.kirk.replit.dev/api/upload/Sample-Project/sast \
+          -H "Content-Type: application/json" \
+          -d @security-reports/$ENRICHED_FILE
