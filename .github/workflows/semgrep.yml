@@ -1,4 +1,4 @@
-name: Semgrep Offline Security Scan with AI Enrichment
+name: Semgrep Offline Security Scan with OpenAI Enrichment
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   semgrep:
-    name: Offline Semgrep Scan + AI Enrichment
+    name: Offline Semgrep Scan + OpenAI Enrichment
     runs-on: ubuntu-latest
 
     permissions:
@@ -26,7 +26,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y rsync python3-pip
-          python3 -m pip install semgrep requests
+          python3 -m pip install semgrep openai
 
       - name: Setup SSH and Download Custom Rules
         run: |
@@ -50,91 +50,58 @@ jobs:
 
           echo "file_name=semgrep-results-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
 
-      - name: Enrich Semgrep Results with Gemini AI
+      - name: Enrich Semgrep Results with OpenAI
         env:
-          GEMENI_API_KEY: ${{ secrets.GEMENI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           FILE_NAME: ${{ steps.run_scan.outputs.file_name }}
         run: |
-          cat > enrich_with_gemini.py << 'EOF'
-          import json
+          cat > enrich_with_openai.py << 'EOF'
           import os
+          import json
+          import openai
           import time
-          import requests
 
-          api_key = os.getenv("GEMENI_API_KEY")
+          openai.api_key = os.getenv("OPENAI_API_KEY")
           file_name = "security-reports/" + os.getenv("FILE_NAME")
 
           with open(file_name, "r") as f:
               findings = json.load(f)
 
           prompt = f"""
-          You are a security code reviewer.
-          You will be given a JSON file containing Semgrep findings.
-          For each finding, add a new field 'ai_fix' with a short, clear, and secure fix suggestion.
-          Return the result as valid JSON only.
-          Input JSON:
+          You are a security code reviewer AI.
+
+          Given the following Semgrep findings as JSON:
+
           {json.dumps(findings)}
+
+          For each finding, add a new field "ai_fix" with a concise, actionable fix suggestion.
+
+          Return ONLY valid JSON.
           """
 
-          url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
-          headers = {
-              "Content-Type": "application/json"
-          }
-          params = {
-              "key": api_key
-          }
-
-          data = {
-              "contents": [{"parts": [{"text": prompt}]}],
-              "generationConfig": {
-                  "temperature": 0.2,
-                  "maxOutputTokens": 8192
-              }
-          }
-
-          res = None
+          enriched = None
           for attempt in range(3):
               try:
-                  res = requests.post(url, headers=headers, params=params, json=data)
-                  if res.status_code == 503:
-                      print(f"[Gemini] 503 Service Unavailable. Retrying in {2**attempt} seconds...")
-                      time.sleep(2 ** attempt)
-                      continue
-                  res.raise_for_status()
+                  response = openai.ChatCompletion.create(
+                      model="gpt-4o-mini",
+                      messages=[{"role": "user", "content": prompt}],
+                      temperature=0.2,
+                      max_tokens=8192,
+                  )
+                  enriched_text = response.choices[0].message.content
                   break
-              except requests.exceptions.RequestException as e:
-                  print(f"[Gemini] Error: {e}. Retrying in {2**attempt} seconds...")
+              except openai.error.OpenAIError as e:
+                  print(f"[OpenAI] API error: {e}, retrying in {2**attempt} seconds...")
                   time.sleep(2 ** attempt)
           else:
-              print("[Gemini] API unavailable after multiple attempts. Using original file as fallback.")
-              enriched_file = "security-reports/enriched-" + os.getenv("FILE_NAME")
-              with open(enriched_file, "w") as f:
-                  json.dump(findings, f, indent=2)
-              exit(0)
+              print("[OpenAI] API unavailable after retries, using original findings as fallback.")
+              enriched_text = json.dumps(findings)
 
-          response_json = res.json()
-
-          output_text = ""
-          if "candidates" in response_json and len(response_json["candidates"]) > 0:
-              candidate = response_json["candidates"][0]
-              if "message" in candidate and "content" in candidate["message"]:
-                  output_text = candidate["message"]["content"]
-              else:
-                  print("[Gemini] 'message' or 'content' key missing in API response candidate:")
-                  print(candidate)
-          else:
-              print("[Gemini] 'candidates' key missing or empty in API response:")
-              print(response_json)
-
-          if not output_text:
-              print("[Gemini] No output text from API, using original findings as fallback.")
+          try:
+              enriched = json.loads(enriched_text)
+          except json.JSONDecodeError:
+              print("[OpenAI] Returned invalid JSON, using original findings as fallback.")
               enriched = findings
-          else:
-              try:
-                  enriched = json.loads(output_text)
-              except json.JSONDecodeError:
-                  print("[Gemini] Returned invalid JSON. Using original findings as fallback.")
-                  enriched = findings
 
           enriched_file = "security-reports/enriched-" + os.getenv("FILE_NAME")
           with open(enriched_file, "w") as f:
@@ -143,7 +110,7 @@ jobs:
           print(f"Enriched file saved as {enriched_file}")
           EOF
 
-          python3 enrich_with_gemini.py
+          python3 enrich_with_openai.py
 
       - name: Upload Raw and Enriched Results to VM
         run: |
