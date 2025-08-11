@@ -33,17 +33,15 @@ jobs:
         run: |
           mkdir -p security-reports
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-
           semgrep scan --config=auto \
             --exclude=custom-semgrep-rules \
             --exclude=.github \
             --json --json-output=security-reports/semgrep-results-${TIMESTAMP}.json
-
           echo "file_name=semgrep-results-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
 
       - name: Enrich Semgrep Results with Hugging Face API
         env:
-          HF_API_TOKEN: ${{ secrets.HF_API_TOKEN }}
+          HF_API_KEY: ${{ secrets.HF_API_KEY }}
           FILE_NAME: ${{ steps.run_scan.outputs.file_name }}
         run: |
           cat > enrich_with_hf.py << 'EOF'
@@ -52,27 +50,23 @@ jobs:
           import requests
           import time
 
-          HF_API_TOKEN = os.getenv("HF_API_TOKEN")
-          if not HF_API_TOKEN:
-              raise RuntimeError("HF_API_TOKEN not set in secrets")
+          HF_API_KEY = os.getenv("HF_API_KEY")
+          if not HF_API_KEY:
+              raise RuntimeError("HF_API_KEY not set in secrets")
 
           model = "facebook/bart-large-cnn"  # Summarization model
           api_url = f"https://api-inference.huggingface.co/models/{model}"
-          headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
-
+          headers = {"Authorization": f"Bearer {HF_API_KEY}"}
           file_name = "security-reports/" + os.getenv("FILE_NAME")
+
           with open(file_name, "r") as f:
               findings = json.load(f)
 
           prompt = f"""
           You are a security code reviewer AI.
-
           Given the following Semgrep findings as JSON:
-
           {json.dumps(findings)}
-
           For each finding, add a new field "ai_fix" with a concise, actionable fix suggestion.
-
           Return ONLY valid JSON.
           """
 
@@ -104,17 +98,14 @@ jobs:
 
           print(f"Enriched file saved as {enriched_file}")
           EOF
-
           python3 enrich_with_hf.py
 
       - name: Upload Raw and Enriched Results to VM
         run: |
           RAW_FILE=${{ steps.run_scan.outputs.file_name }}
           ENRICHED_FILE=enriched-${{ steps.run_scan.outputs.file_name }}
-
           scp -i ~/.ssh/id_rsa security-reports/$RAW_FILE \
             pranavanil123@34.59.19.208:/home/pranavanil123/findings/semgrep/
-
           scp -i ~/.ssh/id_rsa security-reports/$ENRICHED_FILE \
             pranavanil123@34.59.19.208:/home/pranavanil123/findings/semgrep/
 
