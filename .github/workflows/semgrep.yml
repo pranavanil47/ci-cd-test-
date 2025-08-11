@@ -58,6 +58,7 @@ jobs:
           cat > enrich_with_gemini.py << 'EOF'
           import json
           import os
+          import time
           import requests
 
           api_key = os.getenv("GEMINI_API_KEY")
@@ -75,32 +76,49 @@ jobs:
           {json.dumps(findings)}
           """
 
-          url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent"
-
-          headers = {"Content-Type": "application/json"}
-          params = {"key": api_key}
+          url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+          headers = {
+              "Content-Type": "application/json"
+          }
+          params = {
+              "key": api_key
+          }
 
           data = {
-              "contents": [
-                  {
-                      "parts": [{"text": prompt}]
-                  }
-              ],
+              "contents": [{"parts": [{"text": prompt}]}],
               "generationConfig": {
                   "temperature": 0.2,
                   "maxOutputTokens": 8192
               }
           }
 
-          res = requests.post(url, headers=headers, params=params, json=data)
-          res.raise_for_status()
+          res = None
+          for attempt in range(3):
+              try:
+                  res = requests.post(url, headers=headers, params=params, json=data)
+                  if res.status_code == 503:
+                      print(f"[Gemini] 503 Service Unavailable. Retrying in {2**attempt} seconds...")
+                      time.sleep(2 ** attempt)
+                      continue
+                  res.raise_for_status()
+                  break
+              except requests.exceptions.RequestException as e:
+                  print(f"[Gemini] Error: {e}. Retrying in {2**attempt} seconds...")
+                  time.sleep(2 ** attempt)
+          else:
+              print("[Gemini] API unavailable after multiple attempts. Using original file as fallback.")
+              enriched_file = "security-reports/enriched-" + os.getenv("FILE_NAME")
+              with open(enriched_file, "w") as f:
+                  json.dump(findings, f, indent=2)
+              exit(0)
 
-          output_text = res.json()["candidates"][0]["content"]["parts"][0]["text"]
+          output_text = res.json()["candidates"][0]["message"]["content"]
 
           try:
               enriched = json.loads(output_text)
           except json.JSONDecodeError:
-              raise SystemExit("Gemini returned invalid JSON. Output was:\\n" + output_text)
+              print("[Gemini] Returned invalid JSON. Using original file as fallback.")
+              enriched = findings
 
           enriched_file = "security-reports/enriched-" + os.getenv("FILE_NAME")
           with open(enriched_file, "w") as f:
