@@ -43,7 +43,7 @@ jobs:
           mkdir -p security-reports
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 
-          semgrep scan --config ./custom-semgrep-rules . \
+          semgrep scan --config=auto \
             --exclude=custom-semgrep-rules \
             --exclude=.github \
             --json --json-output=security-reports/semgrep-results-${TIMESTAMP}.json
