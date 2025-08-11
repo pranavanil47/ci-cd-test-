@@ -50,10 +50,9 @@ jobs:
           import os
           import json
           import time
-          import openai
-          from openai.error import OpenAIError
+          from openai import OpenAI, APIError
 
-          openai.api_key = os.getenv("OPENAI_API_KEY")
+          client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
           file_name = "security-reports/" + os.getenv("FILE_NAME")
 
           with open(file_name, "r") as f:
@@ -61,20 +60,16 @@ jobs:
 
           prompt = f"""
           You are a security code reviewer AI.
-
           Given the following Semgrep findings as JSON:
-
           {json.dumps(findings)}
-
           For each finding, add a new field "ai_fix" with a concise, actionable fix suggestion.
-
           Return ONLY valid JSON.
           """
 
-          enriched = None
+          enriched_text = None
           for attempt in range(3):
               try:
-                  response = openai.chat.completions.create(
+                  response = client.chat.completions.create(
                       model="gpt-4o-mini",
                       messages=[{"role": "user", "content": prompt}],
                       temperature=0.2,
@@ -82,21 +77,22 @@ jobs:
                   )
                   enriched_text = response.choices[0].message.content
                   break
-              except OpenAIError as e:
+              except APIError as e:
                   print(f"[OpenAI] API error: {e}, retrying in {2**attempt} seconds...")
-                  if "insufficient_quota" in str(e):
+                  if "insufficient_quota" in str(e).lower():
                       print("[OpenAI] Insufficient quota detected, stopping retries.")
                       break
                   time.sleep(2 ** attempt)
-          else:
-              print("[OpenAI] API unavailable after retries or quota exceeded, using original findings as fallback.")
-              enriched_text = json.dumps(findings)
 
-          try:
-              enriched = json.loads(enriched_text)
-          except json.JSONDecodeError:
-              print("[OpenAI] Returned invalid JSON, using original findings as fallback.")
+          if enriched_text is None:
+              print("[OpenAI] API unavailable, using original findings.")
               enriched = findings
+          else:
+              try:
+                  enriched = json.loads(enriched_text)
+              except json.JSONDecodeError:
+                  print("[OpenAI] Returned invalid JSON, using original findings.")
+                  enriched = findings
 
           enriched_file = "security-reports/enriched-" + os.getenv("FILE_NAME")
           with open(enriched_file, "w") as f:
