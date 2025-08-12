@@ -48,7 +48,7 @@ This collection contains intentionally vulnerable applications designed to test 
   - Gorilla WebSocket 1.4.0 - CVE-2020-27813
   - Gogo Protobuf 1.3.1 - CVE-2021-3121
   - Various golang.org/x packages with multiple CVEs
-  - And 10+ more vulnerable dependencies
+  - And 10+ more vulnerable dependencies 
 
 ### 5. Docker Vulnerable Application (`vulnerable-docker-app/`)
 - **Type:** Container Image
