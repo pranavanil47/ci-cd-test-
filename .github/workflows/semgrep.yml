@@ -60,5 +60,5 @@ jobs:
         scp -i ~/.ssh/id_rsa security-reports/$FILE_NAME \
           pranavanil123@34.59.19.208:/home/pranavanil123/findings/semgrep/
           
-        curl -X POST https://391eb398-1c11-4d32-ab6f-92fd6dc89fe1-00-2ua28acjof5z6.kirk.replit.dev/api/upload/Sample-Project/sast -H "Content-Type: application/json" -d @security-reports/$FILE_NAME
+        curl -X POST https://0813f8a6-e661-4de1-9c7e-dfb9cf5966f6-00-z1kfamu9ai30.pike.replit.dev/api/upload/ci-cd-test/sast -H "Content-Type: application/json" -d @security-reports/$FILE_NAME
 
