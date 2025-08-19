@@ -16,6 +16,9 @@ jobs:
       contents: read
       pull-requests: write
 
+    env:
+      SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -28,34 +31,27 @@ jobs:
         sudo apt-get install -y rsync
         python3 -m pip install semgrep
 
+    # Optional: SSH setup for custom rules
     # - name: Setup SSH and Download Custom Rules
     #   run: |
     #     mkdir -p ~/.ssh
     #     echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
     #     chmod 600 ~/.ssh/id_rsa
     #     ssh-keyscan -H 34.59.19.208 >> ~/.ssh/known_hosts
-
-    #     # Download rules to local folder
+    #
     #     rsync -avz -e "ssh -i ~/.ssh/id_rsa" \
     #       pranavanil123@34.59.19.208:/home/pranavanil123/testing/Semgrep-rules ./custom-semgrep-rules
 
-    - name: Run Semgrep login (code-only)
-      id: run_scans
-      run: |
-        semgrep login
-        
-        echo "file_name=semgrep-results-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
     - name: Run Semgrep with Custom Rules (code-only)
       id: run_scan
       run: |
         mkdir -p security-reports
         TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-        
+
         # Only scan code, exclude the rules and workflow folders
         semgrep scan --config=auto \
           --exclude=custom-semgrep-rules \
           --exclude=.github \
           --json --json-output=security-reports/semgrep-results-${TIMESTAMP}.json
-        
-        echo "file_name=semgrep-results-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
 
+        echo "file_name=semgrep-results-${TIMESTAMP}.json" >> $GITHUB_OUTPUT
