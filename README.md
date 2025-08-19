@@ -7,7 +7,7 @@ This collection contains intentionally vulnerable applications designed to test 
 
 ## Projects Overview
  
-### 1. Node.js Vulnerable Application (`vulnerable-node-app/`)
+### 1. Node.js  Vulnerable Application (`vulnerable-node-app/`)
 - **Language:** Node.js/JavaScript
 - **Package Manager:** npm
 - **Key Vulnerabilities:**
