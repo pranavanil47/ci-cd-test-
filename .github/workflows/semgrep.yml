@@ -33,11 +33,11 @@ jobs:
         mkdir -p ~/.ssh
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H 34.42.56.91 >> ~/.ssh/known_hosts
+        ssh-keyscan -H 34.57.235.175 >> ~/.ssh/known_hosts
 
         # Download rules to local folder
         rsync -avz -e "ssh -i ~/.ssh/id_rsa" \
-          pranavanil123@34.42.56.91:/home/pranavanil123/testing/Semgrep-rules ./custom-semgrep-rules
+          pranavanil123@34.57.235.175:/home/pranavanil123/testing/Semgrep-rules ./custom-semgrep-rules
 
     - name: Run Semgrep with Custom Rules (code-only)
       id: run_scan
@@ -58,7 +58,7 @@ jobs:
         FILE_NAME=${{ steps.run_scan.outputs.file_name }}
         
         scp -i ~/.ssh/id_rsa security-reports/$FILE_NAME \
-          pranavanil123@34.42.56.91:/home/pranavanil123/findings/semgrep/
+          pranavanil123@34.57.235.175:/home/pranavanil123/findings/semgrep/
           
         curl -X POST https://0813f8a6-e661-4de1-9c7e-dfb9cf5966f6-00-z1kfamu9ai30.pike.replit.dev/api/upload/ci-cd-test/sast -H "Content-Type: application/json" -d @security-reports/$FILE_NAME
 
