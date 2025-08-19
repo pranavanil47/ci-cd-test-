@@ -5,7 +5,7 @@ This collection contains intentionally vulnerable applications designed to test 
 ## ⚠️ WARNING ⚠️
 **These applications contain INTENTIONAL SECURITY VULNERABILITIES and should NEVER be deployed in production environments. They are designed solely for security testing purposes.**
 
-## Projects Overview
+## Projects Overvi ew
  
 ### 1. Node.js  Vulnerable Application (`vulnerable-node-app/`)
 - **Language:** Node.js/JavaScript
