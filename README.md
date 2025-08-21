@@ -2,7 +2,7 @@
 
 This collection contains intentionally vulnerable applications designed to test Trivy's Software Bill of Materials (SBOM) and Software Composition Analysis (SCA) capabilities.
 
-## ⚠️ WARNING ⚠️
+## ⚠️ WARNING   ⚠️
 **These applications contain INTENTIONAL SECURITY VULNERABILITIES and should NEVER be deployed in production environments. They are designed solely for security testing purposes.**
 
 ## Projects Overvi ew
