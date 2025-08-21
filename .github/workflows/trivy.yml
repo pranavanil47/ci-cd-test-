@@ -41,7 +41,7 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H 34.57.235.175 >> ~/.ssh/known_hosts
+          ssh-keyscan -H 34.133.205.61 >> ~/.ssh/known_hosts
 
       # ---------- Run Trivy SCA ----------
       - name: Run Trivy SCA (Filesystem Scan)
@@ -57,7 +57,7 @@ jobs:
       - name: Upload Trivy SCA to VM
         run: |
           scp -i ~/.ssh/id_rsa security-reports/${{ steps.sca.outputs.sca_file }} \
-            pranavanil123@34.57.235.175:/home/pranavanil123/findings/trivy_sca/
+            pranavanil123@34.133.205.61:/home/pranavanil123/findings/trivy_sca/
           # curl -X POST https://0813f8a6-e661-4de1-9c7e-dfb9cf5966f6-00-z1kfamu9ai30.pike.replit.dev/api/upload/ci-cd-test/sca -H "Content-Type: application/json" -d @security-reports/${{ steps.sca.outputs.sca_file }}
           curl -X POST https://1fa1b4e4-320c-4ee9-8917-de87400c39cf-00-90faoz9meof2.sisko.replit.dev/api/upload/ci-cd-test/Sample-repo/sca -H "Content-Type: application/json" -d @security-reports/${{ steps.sca.outputs.sca_file }}
 
@@ -82,6 +82,6 @@ jobs:
       - name: Upload Enriched SBOM to VM
         run: |
           scp -i ~/.ssh/id_rsa security-reports/${{ steps.enrich.outputs.enriched_file }} \
-            pranavanil123@34.57.235.175:/home/pranavanil123/findings/trivy_SBOM/
+            pranavanil123@34.133.205.61:/home/pranavanil123/findings/trivy_SBOM/
           # curl -X POST https://0813f8a6-e661-4de1-9c7e-dfb9cf5966f6-00-z1kfamu9ai30.pike.replit.dev/api/upload/ci-cd-test/sbom -H "Content-Type: application/json" -d @security-reports/enriched-${{ steps.sbom.outputs.sbom_file }}
           curl -X POST https://1fa1b4e4-320c-4ee9-8917-de87400c39cf-00-90faoz9meof2.sisko.replit.dev/api/upload/ci-cd-test/Sample-repo/sbom -H "Content-Type: application/json" -d @security-reports/enriched-${{ steps.sbom.outputs.sbom_file }}
